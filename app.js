@@ -65,6 +65,32 @@ function nav(path){
 // 渲染文件列表
 function list(path){
 	var content = `
+	<div id="list" class="mdui-row-xs-3 mdui-row-sm-4 mdui-row-md-5  mdui-grid-list">
+	</div>
+	`;
+	$('#content').html(content);
+	
+    var password = localStorage.getItem('password'+path);
+    $('#list').html(`<div class="mdui-progress"><div class="mdui-progress-indeterminate"></div></div>`);
+    $.post(path,'{"password":"'+password+'"}', function(data,status){
+        var obj = jQuery.parseJSON(data);
+        if(typeof obj != 'null' && obj.hasOwnProperty('error') && obj.error.code == '401'){
+            var pass = prompt("目录加密, 请输入密码","");
+            localStorage.setItem('password'+path, pass);
+            if(pass != null && pass != ""){
+                list(path);
+            }else{
+                history.go(-1);
+            }
+        }else if(typeof obj != 'null'){
+            list_files(path,obj.files);
+        }
+    });
+}
+
+// 渲染文件列表
+function list1(path){
+	var content = `
 	<div id="head_md" class="mdui-typo" style="display:none;padding: 20px 0;"></div>
 
 	 <div class="mdui-row"> 
@@ -109,8 +135,69 @@ function list(path){
         }
     });
 }
-
 function list_files(path,files){
+    html = "";
+    for(i in files){
+        var item = files[i];
+        var p = path+item.name+'/';
+        if(item['size']==undefined){
+            item['size'] = "";
+        }
+
+        item['modifiedTime'] = utc2beijing(item['modifiedTime']);
+        item['size'] = formatFileSize(item['size']);
+        if(item['mimeType'] == 'application/vnd.google-apps.folder'){
+            html +=`<div class="mdui-col">
+			<a href="${p}">
+		<div class="mdui-grid-tile">
+			<img src="https://www.mdui.org/docs/assets/docs/img/card.jpg"/>
+		</div>
+		<div class="mdui-grid-tile-actions">
+		<div class="mdui-grid-tile-text">
+		<div class="mdui-grid-tile-title">${item.name}</div>
+		</div>
+	</div>
+	</a>
+	</div>`;
+        }else{
+            var p = path+item.name;
+            var c = "file";
+            if(item.name == "README.md"){
+                 get_file(p, item, function(data){
+                    markdown("#readme_md",data);
+                });
+            }
+            if(item.name == "HEAD.md"){
+	            get_file(p, item, function(data){
+                    markdown("#head_md",data);
+                });
+            }
+            var ext = p.split('.').pop();
+            if("|html|php|css|go|java|js|json|txt|sh|md|mp4|webm|avi|bmp|jpg|jpeg|png|gif|m4a|mp3|wav|ogg|mpg|mpeg|mkv|rm|rmvb|mov|wmv|asf|ts|flv|".indexOf(`|${ext}|`) >= 0){
+	            p += "?a=view";
+	            c += " view";
+            }
+            html += `
+			<div class="mdui-col">
+			<a href="${p}">
+			<div class="mdui-grid-tile">
+			<img src="https://www.mdui.org/docs/assets/docs/img/card.jpg"/>
+			</div>
+		<div class="mdui-grid-tile-actions">
+		<div class="mdui-grid-tile-text">
+		<div class="mdui-grid-tile-title">${item.name}</div>
+		</div>
+	</div>
+	</a>
+	</div>
+			
+			`;
+        }
+    }
+    $('#list').html(html);
+}
+
+function list_files1(path,files){
     html = "";
     for(i in files){
         var item = files[i];
